@@ -1,0 +1,74 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 初始化 Session State
+if "cash" not in st.session_state:
+    st.session_state.cash = 1_000_000  # 初始現金 100 萬
+if "portfolio" not in st.session_state:
+    st.session_state.portfolio = {stock: 0 for stock in ["2330.TW", "2317.TW", "2412.TW", "1301.TW", "2882.TW"]}
+
+# 模擬即時價格（可以接真實API，這裡隨機產生）
+np.random.seed(42)
+prices = {
+    "2330.TW": round(np.random.uniform(800, 900), 2),
+    "2317.TW": round(np.random.uniform(100, 120), 2),
+    "2412.TW": round(np.random.uniform(120, 140), 2),
+    "1301.TW": round(np.random.uniform(70, 90), 2),
+    "2882.TW": round(np.random.uniform(50, 60), 2)
+}
+
+# 顯示大盤走勢圖
+def plot_market():
+    days = np.arange(30)
+    trend = np.cumsum(np.random.normal(0, 1, size=30)) + 17000
+    plt.figure(figsize=(8, 4))
+    plt.plot(days, trend, label="大盤指數", color="blue")
+    plt.xlabel("天數")
+    plt.ylabel("指數")
+    plt.title("台股大盤模擬走勢")
+    plt.legend()
+    st.pyplot(plt)
+
+# 主介面
+st.title("📈 台股交易模擬系統")
+st.header("大盤走勢")
+plot_market()
+
+# 顯示現金餘額
+st.sidebar.header("帳戶資訊")
+st.sidebar.write(f"💰 現金餘額： NT${st.session_state.cash:,.2f}")
+
+# 顯示持倉
+st.sidebar.header("目前持倉")
+for stock, qty in st.session_state.portfolio.items():
+    st.sidebar.write(f"{stock}: {qty} 股")
+
+# 交易功能
+st.header("進行交易")
+stock_choice = st.selectbox("選擇股票", list(prices.keys()))
+action = st.radio("選擇動作", ["買進", "賣出"])
+quantity = st.number_input("數量 (股)", min_value=1, step=1)
+
+# 顯示當前股價
+st.write(f"目前 {stock_choice} 價格: NT${prices[stock_choice]:,.2f}")
+
+# 按鈕執行交易
+if st.button("執行交易"):
+    cost = prices[stock_choice] * quantity
+
+    if action == "買進":
+        if st.session_state.cash >= cost:
+            st.session_state.cash -= cost
+            st.session_state.portfolio[stock_choice] += quantity
+            st.success(f"成功買進 {quantity} 股 {stock_choice}，花費 NT${cost:,.2f}")
+        else:
+            st.error("現金不足，無法完成交易。")
+    elif action == "賣出":
+        if st.session_state.portfolio[stock_choice] >= quantity:
+            st.session_state.portfolio[stock_choice] -= quantity
+            st.session_state.cash += cost
+            st.success(f"成功賣出 {quantity} 股 {stock_choice}，收入 NT${cost:,.2f}")
+        else:
+            st.error("股票數量不足，無法完成交易。")
